@@ -14,5 +14,5 @@ export const getJobIdFromCard = (card: HTMLElement): string | null => {
  */
 export const hideCard = (card: HTMLElement): void => {
     card.style.display = 'none';
-    card.dataset.hiddenByCleaner = 'true';
+    card.dataset.hiddenByGoldpan = 'true';
 }

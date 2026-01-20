@@ -3,11 +3,14 @@ import { hideCard } from "../utils/utils";
 console.log("Content script loaded");
 
 const processJobPage = () => {
+
+    console.log("Processing job page");
+    
     const jobCards = document.querySelectorAll<HTMLElement>('li[data-occludable-job-id]');
 
     jobCards.forEach((card) => {
 
-        if (card.dataset.hiddenByCleaner) return;
+        if (card.dataset.analyzedByGoldpan) return;
 
         const cardTextSet = card.querySelectorAll<HTMLSpanElement>('span');
 
@@ -25,6 +28,8 @@ const processJobPage = () => {
                 break;
             }
         };
+
+        card.dataset.analyzedByGoldpan = 'true';
         
     });
 };
