@@ -1,16 +1,29 @@
-import { hideCard } from "../utils/utils";
+import { getJobIdFromCard, hideCard } from "../utils/utils";
+// import '../styles.css';
 
 console.log("Content script loaded");
+
+const analyzedJobIds = new Set<string>();
+const blockedJobIds = new Set<string>();
+
+/*const injectGoldpanCss = () => {
+    const goldpanCss = document.createElement('link');
+    goldpanCss.rel = 'stylesheet';
+    goldpanCss.href = chrome.runtime.getURL('styles.css');
+    document.head.appendChild(goldpanCss);
+} */
 
 const processJobPage = () => {
 
     console.log("Processing job page");
-    
+
     const jobCards = document.querySelectorAll<HTMLElement>('li[data-occludable-job-id]');
 
     jobCards.forEach((card) => {
 
-        if (card.dataset.analyzedByGoldpan) return;
+        const jobId = getJobIdFromCard(card);
+
+        if (!jobId || analyzedJobIds.has(jobId)) return;
 
         const cardTextSet = card.querySelectorAll<HTMLSpanElement>('span');
 
@@ -29,7 +42,7 @@ const processJobPage = () => {
             }
         };
 
-        card.dataset.analyzedByGoldpan = 'true';
+        analyzedJobIds.add(jobId);
         
     });
 };
