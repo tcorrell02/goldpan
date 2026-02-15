@@ -1,22 +1,22 @@
+import type { inject } from "vitest";
 import { SELECTORS } from "../config/constants";
 
 export class JobSifter {
     // Readonly to keep from modifying at script runtime
     private readonly sifterKeywords: string[];
 
-    // Quick lookup for analyed job cards, fewer resources used due to reprocessing
-    private processedJobIds = new Set<string>();
-    private hiddenJobIds = new Set<string>();
+   // Map of JobID -> ContentHash to detect if a recycled card actually has new text
+    private processedCache = new Map<string, string>();
 
     // Can disconnect observer when not in use
     private observer: MutationObserver | null = null;
 
     constructor(keywords: string[]) {
-        this.sifterKeywords = keywords.map(kw => kw.toLowerCase()); // Lower case keywords for faster matching and consistency
+        this.sifterKeywords = keywords.map(kw => kw.toLowerCase().trim()); // Lower case keywords for faster matching and consistency
     }
 
     public startSifting(): void {
-
+        this.injectStyles(); // Ensure styles are applied before processing cards to avoid flicker
         this.scanJobCards();
         this.initializeObserver(); //Looks for changes in the DOM to catch job cards as they load/refresh
         console.log("Goldpan: Job Sifter started.");
@@ -30,7 +30,20 @@ export class JobSifter {
         }
     }
 
-    private scanJobCards(): void {
+    private injectStyles(): void {
+        if (document.getElementById('goldpan-filter-styles')) return; // Avoid injecting styles multiple times
+
+        const style = document.createElement('style');
+        style.id = 'goldpan-filter-styles';
+
+        //Solves the recycled node without causing invalid network errors
+        style.textContent = `
+            .goldpan-hidden { display: none !important; }
+        `;
+        document.head.appendChild(style);
+    }
+
+    private scanJobCards = (): void => {
         const jobCards = document.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
         jobCards.forEach(card => this.processJobCard(card));
     }
@@ -40,53 +53,41 @@ export class JobSifter {
         const jobId = card.getAttribute('data-occludable-job-id');
         if (!jobId) return; // Skip if no job ID, should be rare but good to check
 
-        if (this.hiddenJobIds.has(jobId)) {
-            card.style.display = 'none';
-            return; // Already hidden, no need to reprocess
-        }
+        const currentText = card.innerText.toLowerCase().trim();
+        const contentHash = currentText.substring(0, 100); // Simple hash by taking the first 100 chars, good enough for change detection
 
-        if (this.processedJobIds.has(jobId)) {
-            return; // Already analyzed, skip to save resources
-        }
+        if (this.processedCache.get(jobId) === contentHash) return; // If we've already processed this card and content hasn't changed, skip it
+       
+        if (currentText.length < 10) return; // Logic: If the card is currently empty (lazy loading), don't cache it yet
 
-        this.processedJobIds.add(jobId); // Mark as processed to avoid future reprocessing
+        this.processedCache.set(jobId, contentHash);
 
-        const cardTextElements = card.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD_TEXT_ELEMENT);
-        let shouldHide = false;
-
-        for (const textElem of cardTextElements) {
-            const text = textElem.textContent?.toLowerCase().trim() || '';
-            if (this.sifterKeywords.some(kw => text.includes(kw))) {
-                shouldHide = true;
-                break; // No need to check further if one keyword matches
-            }
-        }
-
-        if (shouldHide) {
-            this.hiddenJobIds.add(jobId);
-            card.style.display = 'none';
-        }
+        const shouldFilter = this.sifterKeywords.some(kw => currentText.includes(kw));
+        card.classList.toggle('goldpan-hidden', shouldFilter); // Hide card if it matches any keyword, otherwise ensure it's visible
     }
 
     private initializeObserver(): void {
+        console.log("Observer started.");
         if (this.observer) this.observer.disconnect(); // Clean up existing observer without full stop
 
-        this.observer = new MutationObserver((mutations) => {
-            //Batches DOM reads/writes together for better performance during rapid changes like infinite scroll or page refreshes
-            requestAnimationFrame(() => {
-                const hasAddedNodes = mutations.some(mutation => mutation.addedNodes.length > 0);
-                if (hasAddedNodes) {
-                    this.scanJobCards();
-                }
-            })
-        })
+        const container =  document.querySelector(SELECTORS.JOB_CONTAINER) || document.body;
+        this.observer = new MutationObserver(this.scanJobCards);
+        this.observer.observe(container, { 
+            childList: true, 
+            subtree: true, 
+            attributes: true,
+            attributeFilter: ['class', 'data-occludable-job-id']
+        }); 
 
         // Fallback to body if specific container not found, should be rare
-        const container =  document.querySelector(SELECTORS.JOB_CONTAINER) || document.body;
+        /*const container =  document.querySelector(SELECTORS.JOB_CONTAINER) || document.body;
 
         this.observer.observe(container, { 
             childList: true, 
-            subtree: true 
-        });
+            subtree: true, 
+            
+            attributes: true,
+            attributeFilter: ['data-occludable-job-id'] // Watch for changes to job cards that might affect visibility
+        });*/
     }
 }
