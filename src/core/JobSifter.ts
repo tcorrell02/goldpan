@@ -51,7 +51,7 @@ export class JobSifter {
 
         this.processedJobIds.add(jobId); // Mark as processed to avoid future reprocessing
 
-        const cardTextElements = card.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD_TEXT);
+        const cardTextElements = card.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD_TEXT_ELEMENT);
         let shouldHide = false;
 
         for (const textElem of cardTextElements) {
@@ -66,5 +66,27 @@ export class JobSifter {
             this.hiddenJobIds.add(jobId);
             card.style.display = 'none';
         }
+    }
+
+    private initializeObserver(): void {
+        if (this.observer) this.observer.disconnect(); // Clean up existing observer without full stop
+
+        this.observer = new MutationObserver((mutations) => {
+            //Batches DOM reads/writes together for better performance during rapid changes like infinite scroll or page refreshes
+            requestAnimationFrame(() => {
+                const hasAddedNodes = mutations.some(mutation => mutation.addedNodes.length > 0);
+                if (hasAddedNodes) {
+                    this.scanJobCards();
+                }
+            })
+        })
+
+        // Fallback to body if specific container not found, should be rare
+        const container =  document.querySelector(SELECTORS.JOB_CONTAINER) || document.body;
+
+        this.observer.observe(container, { 
+            childList: true, 
+            subtree: true 
+        });
     }
 }
