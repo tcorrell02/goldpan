@@ -1,9 +1,8 @@
 export const SIFTER_KEYWORDS = [
-    'United States'
-];
+    'united states'
+] as const;
 
 export const SELECTORS = {
+    JOB_CONTAINER: '.scaffold-layout__list',
     JOB_CARD: 'li[data-occludable-job-id]',
-    JOB_CARD_TEXT_ELEMENT: 'span',
-    JOB_CONTAINER: '.scaffold-layout__list'
-}
+} as const

@@ -8,16 +8,7 @@
       "matches": ["https://www.linkedin.com/jobs/*"]
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": ["assets/*"],
-      "matches": ["https://www.linkedin.com/*"]
-    }
-  ],
   "permissions": [
     "storage"
-  ],
-  "host_permissions": [
-    "https://www.linkedin.com/*"
   ]
 }
