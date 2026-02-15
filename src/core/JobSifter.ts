@@ -16,4 +16,24 @@ export class JobSifter {
         this.sifterKeywords = keywords.map(kw => kw.toLowerCase());
     }
 
+    public startSifting(): void {
+
+        this.scanJobCards();
+
+        //Looks for changes in the DOM to catch job cards as they load/refresh
+        this.initializeObserver();
+
+        console.log("Goldpan: Job Sifter started.");
+    }
+
+    public stopSifting(): void {
+        // Stops observer to save resources when not needed, such as when user is not on a job listing page
+        if (this.observer) {
+
+            this.observer.disconnect();
+            this.observer = null;
+            console.log("Goldpan: Job Sifter stopped.");
+            
+        }
+    }
 }
