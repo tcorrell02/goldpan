@@ -1,4 +1,5 @@
 import { getJobIdFromCard, hideCard } from "../utils/utils";
+import { SIFTER_KEYWORDS } from "../config/constants";
 // import '../styles.css';
 
 console.log("Content script loaded");

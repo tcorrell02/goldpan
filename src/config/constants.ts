@@ -1,4 +1,4 @@
-export const FILTER_KEYWORDS = [
+export const SIFTER_KEYWORDS = [
     'United States'
 ];
 
