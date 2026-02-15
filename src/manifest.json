@@ -1,23 +1,23 @@
 {
   "manifest_version": 3,
-  "name": "Goldpan: LinkedIn Job Search Sifter",
+  "name": "Goldpan: Job Sifter",
   "version": "1.0.0",
-  "action": {
-    "default_popup": "src/popup/index.html"
-  },
-  "permissions": [
-    "storage",
-    "unlimitedStorage",
-    "scripting"
-  ],
-  "host_permissions": [
-    "https://www.linkedin.com/jobs/search/*",
-    "https://www.glassdoor.com/*"
-  ],
   "content_scripts": [
     {
       "js": ["src/content/main.ts"],
-      "matches": ["https://www.linkedin.com/jobs/search/*"]
+      "matches": ["https://www.linkedin.com/jobs/*"]
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["https://www.linkedin.com/*"]
+    }
+  ],
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://www.linkedin.com/*"
   ]
 }

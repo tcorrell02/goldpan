@@ -1,4 +1,3 @@
-import type { inject } from "vitest";
 import { SELECTORS } from "../config/constants";
 
 export class JobSifter {
@@ -15,7 +14,8 @@ export class JobSifter {
         this.sifterKeywords = keywords.map(kw => kw.toLowerCase().trim()); // Lower case keywords for faster matching and consistency
     }
 
-    public startSifting(): void {
+    //Need aync to ensure chrome.storage loads before processing cards later
+    public async startSifting(): Promise<void> {
         this.injectStyles(); // Ensure styles are applied before processing cards to avoid flicker
         this.scanJobCards();
         this.initializeObserver(); //Looks for changes in the DOM to catch job cards as they load/refresh
@@ -43,6 +43,7 @@ export class JobSifter {
         document.head.appendChild(style);
     }
 
+    //Need  arrow function to prevserve "this" context from the class for MutationObserver callback
     private scanJobCards = (): void => {
         const jobCards = document.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
         jobCards.forEach(card => this.processJobCard(card));
@@ -78,16 +79,5 @@ export class JobSifter {
             attributes: true,
             attributeFilter: ['class', 'data-occludable-job-id']
         }); 
-
-        // Fallback to body if specific container not found, should be rare
-        /*const container =  document.querySelector(SELECTORS.JOB_CONTAINER) || document.body;
-
-        this.observer.observe(container, { 
-            childList: true, 
-            subtree: true, 
-            
-            attributes: true,
-            attributeFilter: ['data-occludable-job-id'] // Watch for changes to job cards that might affect visibility
-        });*/
     }
 }

@@ -9,7 +9,12 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     react(), 
-    crx({ manifest})
+    crx({ manifest })
   ],
-  base: './' //Essential for relative paths in production
-})
+  base: './', //Essential for relative paths in production
+  
+  build: {
+    // Stops the browser from looking for .map files, silencing the console noise
+    sourcemap: false, 
+  }
+});
