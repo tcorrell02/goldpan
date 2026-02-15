@@ -12,28 +12,59 @@ export class JobSifter {
     private observer: MutationObserver | null = null;
 
     constructor(keywords: string[]) {
-        // Lower case keywords for faster matching and consistency throughout the application
-        this.sifterKeywords = keywords.map(kw => kw.toLowerCase());
+        this.sifterKeywords = keywords.map(kw => kw.toLowerCase()); // Lower case keywords for faster matching and consistency
     }
 
     public startSifting(): void {
 
         this.scanJobCards();
-
-        //Looks for changes in the DOM to catch job cards as they load/refresh
-        this.initializeObserver();
-
+        this.initializeObserver(); //Looks for changes in the DOM to catch job cards as they load/refresh
         console.log("Goldpan: Job Sifter started.");
     }
 
     public stopSifting(): void {
-        // Stops observer to save resources when not needed, such as when user is not on a job listing page
-        if (this.observer) {
-
+        if (this.observer) { // Stops observer to save resources when not needed, such as when user is not on a job listing page
             this.observer.disconnect();
             this.observer = null;
             console.log("Goldpan: Job Sifter stopped.");
-            
+        }
+    }
+
+    private scanJobCards(): void {
+        const jobCards = document.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
+        jobCards.forEach(card => this.processJobCard(card));
+    }
+
+    private processJobCard(card: HTMLElement): void {
+
+        const jobId = card.getAttribute('data-occludable-job-id');
+        if (!jobId) return; // Skip if no job ID, should be rare but good to check
+
+        if (this.hiddenJobIds.has(jobId)) {
+            card.style.display = 'none';
+            return; // Already hidden, no need to reprocess
+        }
+
+        if (this.processedJobIds.has(jobId)) {
+            return; // Already analyzed, skip to save resources
+        }
+
+        this.processedJobIds.add(jobId); // Mark as processed to avoid future reprocessing
+
+        const cardTextElements = card.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD_TEXT);
+        let shouldHide = false;
+
+        for (const textElem of cardTextElements) {
+            const text = textElem.textContent?.toLowerCase().trim() || '';
+            if (this.sifterKeywords.some(kw => text.includes(kw))) {
+                shouldHide = true;
+                break; // No need to check further if one keyword matches
+            }
+        }
+
+        if (shouldHide) {
+            this.hiddenJobIds.add(jobId);
+            card.style.display = 'none';
         }
     }
 }
