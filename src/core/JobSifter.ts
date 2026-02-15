@@ -61,15 +61,14 @@ export class JobSifter {
         // 1. Guard: If the card is empty (lazy loading), abort immediately to save CPU
         if (currentText.length < 10) return;
 
-        // 2. Hash & Cache Check
-        const contentHash = currentText.substring(0, 100);
-        if (this.processedCache.get(jobId) === contentHash) return;
+        // 2. Cache Check: skip members
+        if (this.processedCache.get(jobId) === currentText) return;
 
-        this.processedCache.set(jobId, contentHash);
+        this.processedCache.set(jobId, currentText);
 
         // 3. Evaluate & Execute
         const shouldFilter = this.sifterKeywords.some(kw => currentText.includes(kw));
-        card.classList.toggle('goldpan-hidden', shouldFilter); // Hide card if it matches any keyword, otherwise ensure it's visible
+        card.classList.toggle('goldpan-hidden', shouldFilter);
     }
 
     private initializeObserver(): void {
