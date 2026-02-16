@@ -1,8 +1,8 @@
 import { SELECTORS } from "../config/constants";
+import type { JobCardData } from "./types";
 
 export class JobSifter {
     private readonly sifterKeywords: string[];
-    private processedCache = new Map<string, string>();
     private observer: MutationObserver | null = null;
 
     private scanTimeout: number | null = null; // To debounce rapid mutations
@@ -52,23 +52,42 @@ export class JobSifter {
     }
 
     private processJobCard(card: HTMLElement): void {
-
+        // 1. Attempt to get the card's unique ID
         const jobId = card.getAttribute('data-occludable-job-id');
-        if (!jobId) return; // Skip if no job ID, should be rare but good to check
+        if (!jobId) return;
 
-        const currentText = card.innerText.toLowerCase().trim();
-
-        // 1. Guard: If the card is empty (lazy loading), abort immediately to save CPU
-        if (currentText.length < 10) return;
-
-        // 2. Cache Check: skip members
-        if (this.processedCache.get(jobId) === currentText) return;
-
-        this.processedCache.set(jobId, currentText);
+        // 2. Parse the DOM into a clean TypeScript object
+        const jobData = this.extractCardData(card, jobId);
+        if (!jobData) return;
 
         // 3. Evaluate & Execute
-        const shouldFilter = this.sifterKeywords.some(kw => currentText.includes(kw));
+        const shouldFilter = this.sifterKeywords.some(kw => jobData.location.includes(kw));
         card.classList.toggle('goldpan-hidden', shouldFilter);
+        
+    }
+
+    private extractCardData(card: HTMLElement, jobId: string): JobCardData | null {
+        // 1. Initialize DOM walker to extract text nodes
+        const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT, null);
+        const textNodes: string[] = [];
+        let node: Node | null;
+
+        // 2. Walk through text nodes and collect their values
+        while (node = walker.nextNode()) {
+            const text = node.nodeValue?.toLowerCase().trim();
+            if (text && text.length > 0) textNodes.push(text);
+        }
+
+        // 3. Discard if card not loaded enough for further analysis
+        if (textNodes.length < 4) return null;
+
+        return {
+            id: jobId,
+            title: textNodes[0],
+            company: textNodes[2],
+            location: textNodes[3]
+        }
+
     }
 
     private initializeObserver(): void {
