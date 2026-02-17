@@ -21,6 +21,8 @@ export class JobSifter {
     // DOM inserts. A single scroll event could trigger dozens of mutations.
     private scanTimeout: number | null = null;
 
+    // PERFORMANCE: A high-speed cache to prevent running the TreeWalker 
+    // and rules on cards that haven't changed since the last observer tick.
     private precheckCache = new Map<string, { rawText: string, shouldFilter: boolean }>();
 
     private sifterRules = {
@@ -119,7 +121,7 @@ export class JobSifter {
         const jobData = this.extractCardData(card, jobId);
         if (!jobData) return;
 
-        // 3. Evaluate & Execute
+        // Outsource evaluation for readability
         const shouldFilter = this.evaluateRules(jobData);
 
         this.precheckCache.set(jobId, { rawText: currentRawText, shouldFilter });
