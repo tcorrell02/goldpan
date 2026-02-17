@@ -52,7 +52,7 @@ export class JobSifter {
     }
 
     //Make async later when adding chrome storage
-    public async startSifting(): Promise<void> {
+    public startSifting(): void {
         this.injectStyles();
         this.scanJobCards();
         this.initializeObserver();
