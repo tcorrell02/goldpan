@@ -1,14 +1,36 @@
 import { SELECTORS } from "../config/constants";
-import type { JobCardData } from "./types";
+import type { JobCardData, SifterConfig, MatchGroup } from "./types";
+
+interface CompiledMatchGroup {
+    exact: Set<string>;
+    partial: string[];
+}
 
 export class JobSifter {
-    private readonly sifterKeywords: string[];
     private observer: MutationObserver | null = null;
-
     private scanTimeout: number | null = null; // To debounce rapid mutations
 
-    constructor(keywords: readonly string[]) {
-        this.sifterKeywords = keywords.map(kw => kw.toLowerCase().trim());
+    private sifterRules = {
+        title: {exact: new Set<string>(), partial: [] as string[]},
+        company: {exact: new Set<string>(), partial: [] as string[]},
+        location: {exact: new Set<string>(), partial: [] as string[]}
+    };
+
+    constructor(config: SifterConfig) {
+        this.ruleConfig(config);
+    }
+
+    private ruleConfig(config: SifterConfig): void {
+        const categories: (keyof SifterConfig)[] = ['title', 'company', 'location'];
+
+        categories.forEach(category => {
+            const rawMatchGroup = config[category];
+
+            const exactNormalized = rawMatchGroup.exact.map(s => s.toLowerCase().trim());
+            this.sifterRules[category].exact = new Set(exactNormalized);
+            
+            this.sifterRules[category].partial = rawMatchGroup.partial.map(s => s.toLowerCase().trim());
+        });
     }
 
     //Make async later when adding chrome storage
@@ -61,7 +83,8 @@ export class JobSifter {
         if (!jobData) return;
 
         // 3. Evaluate & Execute
-        const shouldFilter = this.sifterKeywords.some(kw => jobData.location.includes(kw));
+        const shouldFilter = this.evaluateRules(jobData);
+        
         card.classList.toggle('goldpan-hidden', shouldFilter);
         
     }
@@ -88,6 +111,25 @@ export class JobSifter {
             location: textNodes[3]
         }
 
+    }
+
+    private evaluateRules(jobData: JobCardData): boolean { 
+
+        if (this.evaluateMatchGroup(jobData.title, this.sifterRules.title)) return true;
+        if (this.evaluateMatchGroup(jobData.company, this.sifterRules.company)) return true;
+        if (this.evaluateMatchGroup(jobData.location, this.sifterRules.location)) return true;
+
+        return false;
+    }
+
+    private evaluateMatchGroup(text:string, rules: CompiledMatchGroup): boolean {
+        if (!text) return false;
+
+        if (rules.exact.has(text)) return true;
+    
+        if (rules.partial.some(kw => text.includes(kw))) return true;
+
+        return false;
     }
 
     private initializeObserver(): void {
