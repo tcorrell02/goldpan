@@ -21,6 +21,8 @@ export class JobSifter {
     // DOM inserts. A single scroll event could trigger dozens of mutations.
     private scanTimeout: number | null = null;
 
+    private precheckCache = new Map<string, { rawText: string, shouldFilter: boolean }>();
+
     private sifterRules = {
         title: {exact: new Set<string>(), partial: [] as string[]},
         company: {exact: new Set<string>(), partial: [] as string[]},
@@ -105,11 +107,22 @@ export class JobSifter {
         const jobId = card.getAttribute('data-occludable-job-id');
         if (!jobId) return;
 
+
+        const currentRawText = card.textContent || '';
+        const cached = this.precheckCache.get(jobId);
+        
+        if (cached && cached.rawText === currentRawText) {
+            card.classList.toggle('goldpan-hidden', cached.shouldFilter);
+            return;
+        }
+
         const jobData = this.extractCardData(card, jobId);
         if (!jobData) return;
 
         // 3. Evaluate & Execute
         const shouldFilter = this.evaluateRules(jobData);
+
+        this.precheckCache.set(jobId, { rawText: currentRawText, shouldFilter });
 
         // Using classList.toggle ensures cards are hidden efficiently. If the job card is 
         // already hidden, it won't trigger unnecessary style changes.
