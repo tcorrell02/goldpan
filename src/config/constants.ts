@@ -1,13 +1,4 @@
-import type { SifterConfig } from "../core/types";
-
-export const SIFTER_KEYWORDS = [
-    'united states'
-] as const;
-
-export const SELECTORS = {
-    JOB_CONTAINER: '.scaffold-layout__list',
-    JOB_CARD: 'li[data-occludable-job-id]',
-} as const
+import type { SifterConfig } from "./types";
 
 export const SIFTER_CONFIG: SifterConfig = {
     title: {
@@ -15,7 +6,7 @@ export const SIFTER_CONFIG: SifterConfig = {
         partial: ['senior']
     },
     company: {
-        exact: ['dataannotation'], 
+        exact: ['dataannotation', 'lensa'], 
         partial: ['staffing', 'recruiting']
     },
     location: {

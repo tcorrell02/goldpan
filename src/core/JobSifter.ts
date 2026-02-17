@@ -1,5 +1,6 @@
-import { SELECTORS } from "../config/constants";
-import type { JobCardData, SifterConfig, MatchGroup } from "./types";
+import { SELECTORS } from "./constants";
+import type { JobCardData } from "./types";
+import type { SifterConfig } from "../config/types";
 
 interface CompiledMatchGroup {
     exact: Set<string>;
@@ -84,7 +85,7 @@ export class JobSifter {
 
         // 3. Evaluate & Execute
         const shouldFilter = this.evaluateRules(jobData);
-        
+
         card.classList.toggle('goldpan-hidden', shouldFilter);
         
     }
