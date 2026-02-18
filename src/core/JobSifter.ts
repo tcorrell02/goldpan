@@ -61,7 +61,7 @@ export class JobSifter {
     //Make async later when adding chrome storage
     public startSifting(): void {
         this.injectStyles();
-        this.scanJobCards();
+        this.scanInitialJobCards();
         this.initializeObserver();
         console.log("Goldpan: Job Sifter started.");
     }
@@ -92,16 +92,7 @@ export class JobSifter {
         document.head.appendChild(style);
     }
 
-    /**
-     * 50ms Debouncer for the MutationObserver.
-     * Groups rapid-fire DOM mutations into a single execution to prevent main-thread blocking.
-     */
-    private triggerScan = (): void => {
-        if (this.scanTimeout) window.clearTimeout(this.scanTimeout);
-        this.scanTimeout = window.setTimeout(() => this.scanJobCards(), 50);
-    }
-
-    private scanJobCards = (): void => {
+    private scanInitialJobCards = (): void => {
         const jobCards = document.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
         jobCards.forEach(card => this.processJobCard(card));
     }
@@ -133,6 +124,28 @@ export class JobSifter {
         // already hidden, it won't trigger unnecessary style changes.
         card.classList.toggle('goldpan-hidden', shouldFilter);
         
+    }
+
+    private handleMutations = (mutations: MutationRecord[]): void => {
+        for (const mutation of mutations) {
+
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(node => {
+                    if (node instanceof HTMLElement) {
+                        
+                        if (node.matches(SELECTORS.JOB_CARD)) {
+                            this.processJobCard(node);
+                        } 
+                        
+                        else if (node.firstElementChild) {
+                            const nestedCards = node.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
+                            nestedCards.forEach(card => this.processJobCard(card));
+                        }
+                    }
+                });
+            }
+
+        }
     }
 
     /**
@@ -215,7 +228,7 @@ export class JobSifter {
 
         // Performance: attributeFilter severely limits the amount of mutation events fired,
         // ignoring irrelevant changes like hover states or style updates.
-        this.observer = new MutationObserver(this.triggerScan);
+        this.observer = new MutationObserver(this.handleMutations);
         this.observer.observe(container, { 
             childList: true, 
             subtree: true, 
