@@ -25,6 +25,7 @@ export class JobSifter {
     // and rules on cards that haven't changed since the last observer tick.
     private precheckCache = new Map<string, { rawText: string, shouldFilter: boolean }>();
 
+    //Limits cache memory growth for heavy use
     private readonly MAX_CACHE_SIZE = 50;
 
     private sifterRules = {
@@ -187,8 +188,14 @@ export class JobSifter {
         return false;
     }
 
+    /**
+     * Replaces old precheckCache job card entries with new ones.
+     * Strategy: Uses First-In-First-Out eviction.
+     * Why:
+     * 1. Users scroll through job listings linearly to view new opportunities.
+     * 2. Once seen, old job cards are unlikely to be revisited.
+     */
     private updateCache(jobId: string, cardData: { rawText: string, shouldFilter: boolean }): void {
-        console.log(this.precheckCache.size)
         if (this.precheckCache.size >= this.MAX_CACHE_SIZE) {
             const oldestCard = this.precheckCache.keys().next().value;
             if (!oldestCard) return;
