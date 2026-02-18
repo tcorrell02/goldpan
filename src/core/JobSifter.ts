@@ -200,7 +200,7 @@ export class JobSifter {
             childList: true, 
             subtree: true, 
             attributes: true,
-            attributeFilter: ['class', 'data-occludable-job-id']
+            attributeFilter: ['data-occludable-job-id']
         }); 
     }
 }
