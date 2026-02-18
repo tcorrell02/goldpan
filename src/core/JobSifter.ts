@@ -129,6 +129,18 @@ export class JobSifter {
     private handleMutations = (mutations: MutationRecord[]): void => {
         for (const mutation of mutations) {
 
+            const target = mutation.target.nodeType === Node.TEXT_NODE 
+                ? mutation.target.parentElement 
+                : mutation.target as HTMLElement;
+
+            if (target) {
+                const parentCard = target.closest(SELECTORS.JOB_CARD) as HTMLElement;
+                if (parentCard) {
+                    this.processJobCard(parentCard);
+                    continue; 
+                }
+            }
+
             if (mutation.type === 'childList') {
                 mutation.addedNodes.forEach(node => {
                     if (node instanceof HTMLElement) {
