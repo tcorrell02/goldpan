@@ -25,6 +25,8 @@ export class JobSifter {
     // and rules on cards that haven't changed since the last observer tick.
     private precheckCache = new Map<string, { rawText: string, shouldFilter: boolean }>();
 
+    private readonly MAX_CACHE_SIZE = 50;
+
     private sifterRules = {
         title: {exact: new Set<string>(), partial: [] as string[]},
         company: {exact: new Set<string>(), partial: [] as string[]},
@@ -124,7 +126,7 @@ export class JobSifter {
         // Outsource evaluation for readability
         const shouldFilter = this.evaluateRules(jobData);
 
-        this.precheckCache.set(jobId, { rawText: currentRawText, shouldFilter });
+        this.updateCache(jobId, { rawText: currentRawText, shouldFilter });
 
         // Using classList.toggle ensures cards are hidden efficiently. If the job card is 
         // already hidden, it won't trigger unnecessary style changes.
@@ -183,6 +185,17 @@ export class JobSifter {
         if (rules.partial.some(kw => text.includes(kw))) return true;
 
         return false;
+    }
+
+    private updateCache(jobId: string, cardData: { rawText: string, shouldFilter: boolean }): void {
+        console.log(this.precheckCache.size)
+        if (this.precheckCache.size >= this.MAX_CACHE_SIZE) {
+            const oldestCard = this.precheckCache.keys().next().value;
+            if (!oldestCard) return;
+
+            this.precheckCache.delete(oldestCard);
+        }
+        this.precheckCache.set(jobId, cardData);
     }
 
     /**
