@@ -17,10 +17,6 @@ interface CompiledMatchGroup {
 export class JobSifter {
     private observer: MutationObserver | null = null;
 
-    // We debounce the observer because Single Page Applications often batch 
-    // DOM inserts. A single scroll event could trigger dozens of mutations.
-    private scanTimeout: number | null = null;
-
     // PERFORMANCE: A high-speed cache to prevent running the TreeWalker 
     // and rules on cards that haven't changed since the last observer tick.
     private precheckCache = new Map<string, { rawText: string, shouldFilter: boolean }>();
@@ -70,7 +66,6 @@ export class JobSifter {
         if (this.observer) { 
             this.observer.disconnect();
             this.observer = null;
-            if (this.scanTimeout) window.clearTimeout(this.scanTimeout);
             console.log("Goldpan: Job Sifter stopped.");
         }
     }
