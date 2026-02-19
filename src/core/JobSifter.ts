@@ -129,35 +129,40 @@ export class JobSifter {
     private handleMutations = (mutations: MutationRecord[]): void => {
         for (const mutation of mutations) {
 
-            const target = mutation.target.nodeType === Node.TEXT_NODE 
-                ? mutation.target.parentElement 
-                : mutation.target as HTMLElement;
+            if (mutation.type === 'childList') {
 
-            if (target) {
-                const parentCard = target.closest(SELECTORS.JOB_CARD) as HTMLElement;
-                if (parentCard) {
-                    this.processJobCard(parentCard);
-                    continue; 
+                mutation.addedNodes.forEach(node => {
+                    const normalizedNode = this.normalizeToElement(node);
+                    if (!normalizedNode) return;
+
+                    if (normalizedNode.matches(SELECTORS.JOB_CARD)) {
+                        this.processJobCard(normalizedNode as HTMLElement);
+
+                    } else if (normalizedNode.children.length > 0) {
+                        const nestedNodes = normalizedNode.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
+                        nestedNodes.forEach(c => this.processJobCard(c));
+                    }
+                });
+
+            } 
+            
+            else {
+
+                const targetElement = this.normalizeToElement(mutation.target);
+
+                if (targetElement) {
+                    const parentCard = targetElement.closest(SELECTORS.JOB_CARD) as HTMLElement;
+                    if (parentCard) this.processJobCard(parentCard);
                 }
             }
 
-            if (mutation.type === 'childList') {
-                mutation.addedNodes.forEach(node => {
-                    if (node instanceof HTMLElement) {
-                        
-                        if (node.matches(SELECTORS.JOB_CARD)) {
-                            this.processJobCard(node);
-                        } 
-                        
-                        else if (node.firstElementChild) {
-                            const nestedCards = node.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
-                            nestedCards.forEach(card => this.processJobCard(card));
-                        }
-                    }
-                });
-            }
-
         }
+    }
+
+    private normalizeToElement(node: Node): Element | null {
+        if (node.nodeType === Node.TEXT_NODE) return node.parentElement;
+        if (node.nodeType === Node.ELEMENT_NODE) return node as Element;
+        return null;
     }
 
     /**
