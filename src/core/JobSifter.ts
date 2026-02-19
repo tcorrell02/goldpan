@@ -128,7 +128,8 @@ export class JobSifter {
 
     private handleMutations = (mutations: MutationRecord[]): void => {
         for (const mutation of mutations) {
-
+            // INSERTIONS (New jobs loaded via scroll or page change)
+            // Target: Container, process the new children
             if (mutation.type === 'childList') {
 
                 mutation.addedNodes.forEach(node => {
@@ -145,7 +146,8 @@ export class JobSifter {
                 });
 
             } 
-            
+            // UPDATES (Text changes, attribute changes)
+            // Target: Node that changed, process its parent card
             else {
 
                 const targetElement = this.normalizeToElement(mutation.target);
@@ -159,6 +161,9 @@ export class JobSifter {
         }
     }
 
+    /**
+     * Helper: Safely converts raw nodes (like text or comments) into Elements.
+     */
     private normalizeToElement(node: Node): Element | null {
         if (node.nodeType === Node.TEXT_NODE) return node.parentElement;
         if (node.nodeType === Node.ELEMENT_NODE) return node as Element;
@@ -184,7 +189,7 @@ export class JobSifter {
             if (text && text.length > 0) textNodes.push(text);
         }
 
-        // 3. Stop early if the card is not loaded enough to contain key nodes
+        // Stop early if the card is not loaded enough to contain key nodes
         if (textNodes.length < 4) return null;
 
         return {
