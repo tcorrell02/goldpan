@@ -45,17 +45,6 @@ As a best practice:
 
 ---
 
-## Local Development
-
-This project is built using React, TypeScript, and Vite. It utilizes [CRXJS](https://crxjs.dev/vite-plugin) to bundle the app as a Chrome Extension.
-
-1. Run `npm install` to install dependencies.
-2. Run `npm run dev` to start the Vite development server. CRXJS will automatically build the extension files into the `dist` folder and watch for changes.
-3. Load the `dist` folder into Chrome via `chrome://extensions/` (Developer Mode).
-4. **HMR is supported:** When you save changes in your React components or content scripts, the extension will automatically update in the browser!
-
----
-
 ## Contributing
 
 **Currently, I am not accepting direct Pull Requests for this repository.** Goldpan: Job Sifter is in early, active development, and I am focused on building out the core roadmap. However, the project is open-source! You are highly encouraged to **Fork** this repository, modify the code to fit your own job-hunting needs, and experiment with it on your own GitHub account. 
