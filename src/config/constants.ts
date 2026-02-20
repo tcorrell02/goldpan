@@ -3,14 +3,14 @@ import type { SifterConfig } from "./types";
 export const SIFTER_CONFIG: SifterConfig = {
     title: {
         exact: [],
-        partial: ['senior']
+        partial: []
     },
     company: {
-        exact: ['dataannotation', 'lensa'], 
-        partial: ['staffing', 'recruiting']
+        exact: [], 
+        partial: []
     },
     location: {
-        exact: ['utah'], 
-        partial: ['united states'] 
+        exact: [], 
+        partial: [] 
     }
 };
