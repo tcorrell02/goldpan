@@ -17,9 +17,12 @@ interface CompiledMatchGroup {
 export class JobSifter {
     private observer: MutationObserver | null = null;
 
-    // We debounce the observer because Single Page Applications often batch 
-    // DOM inserts. A single scroll event could trigger dozens of mutations.
-    private scanTimeout: number | null = null;
+    // PERFORMANCE: A high-speed cache to prevent running the TreeWalker 
+    // and rules on cards that haven't changed since the last observer tick.
+    private precheckCache = new Map<string, { rawText: string, shouldFilter: boolean }>();
+
+    //Limits cache memory growth for heavy use
+    private readonly MAX_CACHE_SIZE = 50;
 
     private sifterRules = {
         title: {exact: new Set<string>(), partial: [] as string[]},
@@ -52,9 +55,9 @@ export class JobSifter {
     }
 
     //Make async later when adding chrome storage
-    public async startSifting(): Promise<void> {
+    public startSifting(): void {
         this.injectStyles();
-        this.scanJobCards();
+        this.scanInitialJobCards();
         this.initializeObserver();
         console.log("Goldpan: Job Sifter started.");
     }
@@ -63,7 +66,6 @@ export class JobSifter {
         if (this.observer) { 
             this.observer.disconnect();
             this.observer = null;
-            if (this.scanTimeout) window.clearTimeout(this.scanTimeout);
             console.log("Goldpan: Job Sifter stopped.");
         }
     }
@@ -85,16 +87,7 @@ export class JobSifter {
         document.head.appendChild(style);
     }
 
-    /**
-     * 50ms Debouncer for the MutationObserver.
-     * Groups rapid-fire DOM mutations into a single execution to prevent main-thread blocking.
-     */
-    private triggerScan = (): void => {
-        if (this.scanTimeout) window.clearTimeout(this.scanTimeout);
-        this.scanTimeout = window.setTimeout(() => this.scanJobCards(), 50);
-    }
-
-    private scanJobCards = (): void => {
+    private scanInitialJobCards = (): void => {
         const jobCards = document.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
         jobCards.forEach(card => this.processJobCard(card));
     }
@@ -105,16 +98,71 @@ export class JobSifter {
         const jobId = card.getAttribute('data-occludable-job-id');
         if (!jobId) return;
 
+
+        const currentRawText = card.textContent || '';
+        const cached = this.precheckCache.get(jobId);
+        
+        if (cached && cached.rawText === currentRawText) {
+            card.classList.toggle('goldpan-hidden', cached.shouldFilter);
+            return;
+        }
+
         const jobData = this.extractCardData(card, jobId);
         if (!jobData) return;
 
-        // 3. Evaluate & Execute
+        // Outsource evaluation for readability
         const shouldFilter = this.evaluateRules(jobData);
+
+        this.updateCache(jobId, { rawText: currentRawText, shouldFilter });
 
         // Using classList.toggle ensures cards are hidden efficiently. If the job card is 
         // already hidden, it won't trigger unnecessary style changes.
         card.classList.toggle('goldpan-hidden', shouldFilter);
         
+    }
+
+    private handleMutations = (mutations: MutationRecord[]): void => {
+        for (const mutation of mutations) {
+            // INSERTIONS (New jobs loaded via scroll or page change)
+            // Target: Container, process the new children
+            if (mutation.type === 'childList') {
+
+                mutation.addedNodes.forEach(node => {
+                    const normalizedNode = this.normalizeToElement(node);
+                    if (!normalizedNode) return;
+
+                    if (normalizedNode.matches(SELECTORS.JOB_CARD)) {
+                        this.processJobCard(normalizedNode as HTMLElement);
+
+                    } else if (normalizedNode.children.length > 0) {
+                        const nestedNodes = normalizedNode.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
+                        nestedNodes.forEach(c => this.processJobCard(c));
+                    }
+                });
+
+            } 
+            // UPDATES (Text changes, attribute changes)
+            // Target: Node that changed, process its parent card
+            else {
+
+                const targetElement = this.normalizeToElement(mutation.target);
+
+                if (targetElement) {
+                    const parentCard = targetElement.closest(SELECTORS.JOB_CARD) as HTMLElement;
+                    if (parentCard) this.processJobCard(parentCard);
+                }
+            }
+
+        }
+    }
+
+    /**
+     * Helper: Safely converts raw nodes (like text or comments) into Elements.
+     */
+    private normalizeToElement(node: Node): Element | null {
+        if (node.nodeType === Node.TEXT_NODE) return node.parentElement;
+        if (node.nodeType === Node.ELEMENT_NODE) return node as Element;
+        return null;
     }
 
     /**
@@ -136,7 +184,7 @@ export class JobSifter {
             if (text && text.length > 0) textNodes.push(text);
         }
 
-        // 3. Stop early if the card is not loaded enough to contain key nodes
+        // Stop early if the card is not loaded enough to contain key nodes
         if (textNodes.length < 4) return null;
 
         return {
@@ -171,6 +219,23 @@ export class JobSifter {
     }
 
     /**
+     * Replaces old precheckCache job card entries with new ones.
+     * Strategy: Uses First-In-First-Out eviction.
+     * Why:
+     * 1. Users scroll through job listings linearly to view new opportunities.
+     * 2. Once seen, old job cards are unlikely to be revisited.
+     */
+    private updateCache(jobId: string, cardData: { rawText: string, shouldFilter: boolean }): void {
+        if (this.precheckCache.size >= this.MAX_CACHE_SIZE) {
+            const oldestCard = this.precheckCache.keys().next().value;
+            if (!oldestCard) return;
+
+            this.precheckCache.delete(oldestCard);
+        }
+        this.precheckCache.set(jobId, cardData);
+    }
+
+    /**
      * Sets up the DOM listener for mutations (like lazy-loaded/infinite-scroll items).
      */
     private initializeObserver(): void {
@@ -180,12 +245,12 @@ export class JobSifter {
 
         // Performance: attributeFilter severely limits the amount of mutation events fired,
         // ignoring irrelevant changes like hover states or style updates.
-        this.observer = new MutationObserver(this.triggerScan);
+        this.observer = new MutationObserver(this.handleMutations);
         this.observer.observe(container, { 
             childList: true, 
             subtree: true, 
             attributes: true,
-            attributeFilter: ['class', 'data-occludable-job-id']
+            attributeFilter: ['data-occludable-job-id']
         }); 
     }
 }
