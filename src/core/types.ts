@@ -10,6 +10,7 @@ export interface SearchStrategy {
     name: string;
     containerSelector: string;
     jobCardSelector: string;
+    observedAttribute: string;
 
     getJobId: (jobCard: HTMLElement) => string | null;
 }

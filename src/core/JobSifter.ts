@@ -253,9 +253,7 @@ export class JobSifter {
             childList: true, 
             subtree: true, 
             attributes: true,
-            attributeFilter: [
-                'data-occludable-job-id'
-            ]
+            attributeFilter: [this.strategy.observedAttribute]
         }); 
     }
 }

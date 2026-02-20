@@ -4,7 +4,8 @@ export const SEARCH_STRATEGIES: SearchStrategy[] = [
     {
         name: 'LoggedInSearch',
         containerSelector: '.scaffold-layout__list', 
-        jobCardSelector: 'li[data-occludable-job-id]', 
+        jobCardSelector: 'li[data-occludable-job-id]',
+        observedAttribute: 'data-occludable-job-id', 
         
         getJobId: (card: HTMLElement) => {
             return card.getAttribute('data-occludable-job-id') || null;
