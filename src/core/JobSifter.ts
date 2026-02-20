@@ -1,6 +1,6 @@
-import { SELECTORS } from "./constants";
 import type { JobCardData } from "./types";
 import type { SifterConfig } from "../config/types";
+import type { SearchStrategy } from "./types";
 
 interface CompiledMatchGroup {
     exact: Set<string>;
@@ -30,8 +30,11 @@ export class JobSifter {
         location: {exact: new Set<string>(), partial: [] as string[]}
     };
 
-    constructor(config: SifterConfig) {
+    private strategy: SearchStrategy;
+
+    constructor(config: SifterConfig, strategy: SearchStrategy) {
         this.ruleConfig(config);
+        this.strategy = strategy;
     }
 
     /**
@@ -88,14 +91,14 @@ export class JobSifter {
     }
 
     private scanInitialJobCards = (): void => {
-        const jobCards = document.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
+        const jobCards = document.querySelectorAll<HTMLElement>(this.strategy.jobCardSelector);
         jobCards.forEach(card => this.processJobCard(card));
     }
 
     private processJobCard(card: HTMLElement): void {
         // LinkedIn uses 'data-occludable-job-id' as a pseudo-anchor for job card tracking.
         // We require it to ensure we step from one job card to the next.
-        const jobId = card.getAttribute('data-occludable-job-id');
+        const jobId = this.strategy.getJobId(card);
         if (!jobId) return;
 
 
@@ -131,11 +134,11 @@ export class JobSifter {
                     const normalizedNode = this.normalizeToElement(node);
                     if (!normalizedNode) return;
 
-                    if (normalizedNode.matches(SELECTORS.JOB_CARD)) {
+                    if (normalizedNode.matches(this.strategy.jobCardSelector)) {
                         this.processJobCard(normalizedNode as HTMLElement);
 
                     } else if (normalizedNode.children.length > 0) {
-                        const nestedNodes = normalizedNode.querySelectorAll<HTMLElement>(SELECTORS.JOB_CARD);
+                        const nestedNodes = normalizedNode.querySelectorAll<HTMLElement>(this.strategy.jobCardSelector);
                         nestedNodes.forEach(c => this.processJobCard(c));
                     }
                 });
@@ -148,7 +151,7 @@ export class JobSifter {
                 const targetElement = this.normalizeToElement(mutation.target);
 
                 if (targetElement) {
-                    const parentCard = targetElement.closest(SELECTORS.JOB_CARD) as HTMLElement;
+                    const parentCard = targetElement.closest(this.strategy.jobCardSelector) as HTMLElement;
                     if (parentCard) this.processJobCard(parentCard);
                 }
             }
@@ -241,7 +244,7 @@ export class JobSifter {
     private initializeObserver(): void {
         if (this.observer) this.observer.disconnect(); // Clean up existing observer without full stop
 
-        const container =  document.querySelector(SELECTORS.JOB_CONTAINER) || document.body;
+        const container =  document.querySelector(this.strategy.containerSelector) || document.body;
 
         // Performance: attributeFilter severely limits the amount of mutation events fired,
         // ignoring irrelevant changes like hover states or style updates.
@@ -250,7 +253,9 @@ export class JobSifter {
             childList: true, 
             subtree: true, 
             attributes: true,
-            attributeFilter: ['data-occludable-job-id']
+            attributeFilter: [
+                'data-occludable-job-id'
+            ]
         }); 
     }
 }
