@@ -23,6 +23,18 @@ export const SEARCH_STRATEGIES: SearchStrategy[] = [
             if (urn) return urn.split(':').pop() || null;
             return null;
         }
+    },
+    {
+        name: 'LoggedInAISearch',
+        containerSelector: 'div[componentkey="SearchResultsMainContent"]',
+        jobCardSelector: 'div[data-view-name="job-search-job-card"]',
+        observedAttribute: 'data-view-tracking-scope',
+
+        getJobId: (card: HTMLElement) => {
+            const trackingScope = card.getAttribute('data-view-tracking-scope');
+            if (trackingScope) return trackingScope.match(/"contentTrackingId":"(.*?)=="/)?.[1] || null;
+            return null;
+        }
     }
 ];
 
