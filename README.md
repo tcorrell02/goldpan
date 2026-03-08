@@ -43,6 +43,7 @@ As a best practice:
 * Non-Stick Coating for Reposted Jobs: Collect reposted jobs as you search so that you never see them in the future.
 * Easier Sifting: Building a popup UI so you can easily add, remove, and toggle your blocked words right from your browser, without ever needing to touch the code.
 * Fools-Gold-Proof Testing: Tests and other error handling improvements for scripting and the popup UI.
+* Prospector's Dream: Expanded job sifting for other popular job boards.
 
 ---
 
